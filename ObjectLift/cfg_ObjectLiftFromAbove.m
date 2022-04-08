@@ -7,7 +7,12 @@ WL.cfg.RobotName = 'ROBOT_3BOT-11'; % LAVENDER rig
 %WL.cfg.RobotName = 'ROBOT_3BOT-10'; % GERANIUM rig
 
 % User-defined force-field functions used in demos are found here:
+% if ismac
+%     assignin('base','MHF_FieldFuncPath','/Volumes/wolpert-locker/users/jni2104/RobotFields/');
+%     assignin('base','MHF_DevicePath','/Volumes/wolpert-locker/users/jni2104/MHF_Device/');
+% else
 assignin('base','MHF_FieldFuncPath','J:\RobotFields\');
+% end
 
 WL.cfg.GLSL = true;
 WL.cfg.OculusRift = false;
@@ -17,11 +22,12 @@ WL.cfg.predict_display_timing = -1; % Don't predict when to call display_func() 
 
 WL.cfg.RobotForceMax = 40; % IMPORTANT! When testing, limit force to 10N
 
-WL.cfg.OculusMonitorView = false;%true;
+WL.cfg.OculusMonitorView = false; %true;
 WL.cfg.OculusMonitorUpdateHz = 10;
 %WL.cfg.RotateScreen = true; % true on VIOLET & BEGONIA rigs
 WL.cfg.MouseFlag = true;
-%WL.cfg.SmallScreen = false;
+WL.cfg.SmallScreen = true;
+WL.cfg.SmallScreenScale = 0.45; % NB on retina, 0.5 = fullscreen
 %WL.cfg.ScreenSize = 2*[100 100 640 640*16.8/29.8]; 
 %WL.cfg.ClearColor = [ 0 0 0 ];
 %WL.cfg.trial_save = true;

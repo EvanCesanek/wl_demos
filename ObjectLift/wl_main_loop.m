@@ -219,7 +219,7 @@ while ~Exit % && test_count < length(delays)
                     end
                 end
             elseif WL.cfg.GLSL
-                WL.eyeIndex = eyeIndex; % because we need access to this in display_func
+                WL.eyeIndex = eyeindex; % because we need access to this in display_func
             end
             
             if wl_is_error(WL)
