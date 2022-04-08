@@ -105,7 +105,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             % TODO: Fix light position matrix so each column is the position vector for one light (not each row)
             WL.Light.Shadows.TextureUnit = 8; % Remember not to reassign this texture unit later
             WL.Light.Shadows.TextureSize = 4096;
-            rmfield(WL.Light, 'Shadows'); % Uncomment for no shadows
+            rmfield(WL.Light, 'Shadows'); % Comment out if you want to have shadows
             WL.init_lighting();
             
             % Default Texture
@@ -116,7 +116,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             glTexImage2D(GL.TEXTURE_2D, 0, GL.RGBA, 1, 1, 0, GL.RGBA, GL.UNSIGNED_BYTE, uint8([255 255 255 255]));
             
             % Additional Textures
-            WL.init_textures({'../../images/container2.png', '../../images/container2_specular.png'}, [1 2]);
+            WL.init_textures({'../images/container2.png', '../images/container2_specular.png'}, [1 2]);
             
             % Game Objects
             WL.Cube = WL.gen_cube_mesh();
@@ -166,8 +166,9 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             global GL
             Screen('BeginOpenGL', win);
             
-            glClearColor(WL.cfg.ClearColor(1),WL.cfg.ClearColor(2),WL.cfg.ClearColor(3),0);
-            glClear();
+            % In v1.8+ these are properly called in wl_main_loop
+            %glClearColor(WL.cfg.ClearColor(1),WL.cfg.ClearColor(2),WL.cfg.ClearColor(3),0);
+            %glClear();
 
             glUseProgram(WL.ShaderProgram);
             
@@ -184,7 +185,6 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                 glFrontFace(GL.CW);
                 WL.draw_object(WL.Cube);
             end
-            % Draw other objects (floor and plunger...) floor large cube at WL.SurfaceZ, plunger at RobotPosition
             
             glUseProgram(0);
             Screen('EndOpenGL', win)
@@ -295,7 +295,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             % 1. Indicate the shader type
             shadertype = GL.VERTEX_SHADER; %GEOMETRY_SHADER %FRAGMENT_SHADER; %TESS_CONTROL_SHADER; %TESS_EVALUATION_SHADER;
             % 2. Read shader source code from file
-            fid = fopen('../../shaders/Standard.vert', 'rt');
+            fid = fopen('../shaders/Standard.vert', 'rt');
             shadersrc = fread(fid);
             fclose(fid);
             % 3. Create shader
@@ -311,7 +311,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             % 1. Indicate the shader type
             shadertype = GL.FRAGMENT_SHADER; %TESS_CONTROL_SHADER; %TESS_EVALUATION_SHADER;
             % 2. Read shader source code from file
-            fid = fopen('../../shaders/Standard.frag', 'rt');
+            fid = fopen('../shaders/Standard.frag', 'rt');
             shadersrc = fread(fid);
             fclose(fid);
             % 3. Create shader

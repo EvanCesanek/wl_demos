@@ -9,7 +9,8 @@ WL.cfg.RobotName = 'ROBOT_3BOT-11'; % LAVENDER rig
 % User-defined force-field functions used in demos are found here:
 assignin('base','MHF_FieldFuncPath','J:\RobotFields\');
 
-WL.cfg.OculusRift = true;
+WL.cfg.GLSL = true;
+WL.cfg.OculusRift = false;
 WL.cfg.OculusGrid = false;
 %WL.cfg.ScreenIndex = 1;
 WL.cfg.predict_display_timing = -1; % Don't predict when to call display_func() to avoid white flashes.
@@ -18,15 +19,15 @@ WL.cfg.RobotForceMax = 40; % IMPORTANT! When testing, limit force to 10N
 
 WL.cfg.OculusMonitorView = false;%true;
 WL.cfg.OculusMonitorUpdateHz = 10;
-%obj.cfg.RotateScreen = true; % true on VIOLET & BEGONIA rigs
-obj.cfg.MouseFlag = true;
-%obj.cfg.SmallScreen = false;
-%obj.cfg.ScreenSize = 2*[100 100 640 640*16.8/29.8]; 
-%obj.cfg.ClearColor = [ 0 0 0 ];
-%obj.cfg.trial_save = true;
-%obj.cfg.verbose = 0;
-%obj.cfg.vol = 0.5;
-%obj.cfg.Debug = true;
+%WL.cfg.RotateScreen = true; % true on VIOLET & BEGONIA rigs
+WL.cfg.MouseFlag = true;
+%WL.cfg.SmallScreen = false;
+%WL.cfg.ScreenSize = 2*[100 100 640 640*16.8/29.8]; 
+%WL.cfg.ClearColor = [ 0 0 0 ];
+%WL.cfg.trial_save = true;
+%WL.cfg.verbose = 0;
+%WL.cfg.vol = 0.5;
+%WL.cfg.Debug = true;
 
 WL.cfg.plot_timing = 0;
 
