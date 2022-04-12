@@ -149,6 +149,6 @@ glClearDepth(1.0);
 Screen('EndOpenGL', WL.Screen.window);
 
 % Get a time stamp with a flip
-Screen('AsyncFlipBegin', WL.Screen.window);
+%Screen('AsyncFlipBegin', WL.Screen.window); %EAC - small screen glsl breaks if we do this...
 
 
