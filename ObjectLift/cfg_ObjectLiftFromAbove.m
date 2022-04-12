@@ -15,6 +15,7 @@ assignin('base','MHF_FieldFuncPath','J:\RobotFields\');
 % end
 
 WL.cfg.GLSL = true;
+WL.cfg.Shadows = true;
 WL.cfg.OculusRift = false;
 WL.cfg.OculusGrid = false;
 %WL.cfg.ScreenIndex = 1;
@@ -27,7 +28,7 @@ WL.cfg.OculusMonitorUpdateHz = 10;
 %WL.cfg.RotateScreen = true; % true on VIOLET & BEGONIA rigs
 WL.cfg.MouseFlag = true;
 WL.cfg.SmallScreen = true;
-WL.cfg.SmallScreenScale = 0.45; % NB on retina, 0.5 = fullscreen
+WL.cfg.SmallScreenScale = 0.3; % NB on retina, 0.5 = fullscreen
 %WL.cfg.ScreenSize = 2*[100 100 640 640*16.8/29.8]; 
 %WL.cfg.ClearColor = [ 0 0 0 ];
 %WL.cfg.trial_save = true;

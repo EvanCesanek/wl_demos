@@ -111,23 +111,30 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             if strcmp(WL.glslVersion,'1.20')
                 vspath = '../shaders/Standard120.vert';
                 fspath = '../shaders/Standard120.frag';
+                vspath2 = '../shaders/StandardShadow120.vert';
+                fspath2 = '../shaders/StandardShadow120.frag';
             else
                vspath = '../shaders/Standard.vert';
                fspath = '../shaders/Standard.frag';
+               vspath2 = '../shaders/StandardShadow.vert';
+               fspath2 = '../shaders/StandardShadow.frag';
             end
 
             % Shaders
-            WL.init_shader_program(vspath,fspath);
+            WL.ShaderProgram = WL.init_shader_program(vspath,fspath);
+            WL.Light.Shadows.ShaderProgram = WL.init_shader_program(vspath2,fspath2);
             
             % Camera
             WL.init_camera();
             
             % Lights (% w = 0 for directional light, w = 1 for point light)
-            WL.Light.Position =  [ -1  -5  10  0;]; % Remember to change NR_LIGHTS in frag shader if you add lights
+            WL.Light.Position =  [-10 -10 50 0]; % Remember to change NR_LIGHTS in frag shader if you add lights
             % TODO: Fix light position matrix so each column is the position vector for one light (not each row)
             WL.Light.Shadows.TextureUnit = 8; % Remember not to use this texture unit later
             WL.Light.Shadows.TextureSize = 4096;
-            WL.Light = rmfield(WL.Light, 'Shadows'); % Comment out if you want to have shadows
+            if ~WL.cfg.Shadows
+                WL.Light = rmfield(WL.Light, 'Shadows');
+            end
             WL.init_lighting();
             
             % Default Texture
@@ -170,6 +177,8 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         function idle_func(WL)
             if WL.Robot.Active
+                %WL.Cube.position(:,4) = WL.Robot.Position;
+                %WL.Cube.modelMatrixUpdated(4) = true;
                 WL.Cube = WL.set_model_param(WL.Cube, 'position', 4, WL.Robot.Position+[0 0 0.25]');
             end
         end
@@ -189,10 +198,34 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
         function display_func(WL)
             global GL
             Screen('BeginOpenGL', WL.Screen.window);
-            
-            % In v1.8+ these are already called in wl_main_loop
-            %glClearColor(WL.cfg.ClearColor(1),WL.cfg.ClearColor(2),WL.cfg.ClearColor(3),0);
-            %glClear();
+
+            if isfield(WL.Light,'Shadows') && WL.eyeIndex==0
+                glUseProgram(WL.Light.Shadows.ShaderProgram);
+%                 if str2double(WL.glslVersion)<3
+%                     glBindFramebufferEXT(GL.FRAMEBUFFER_EXT, WL.Light.Shadows.ShadowMapFBO);
+%                 else
+%                     glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
+%                 end
+%                 glViewport(0, 0, WL.Light.Shadows.TextureSize, WL.Light.Shadows.TextureSize);
+%                 glClear(bitor(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT));
+%                 if( WL.State.Current == WL.State.RUNNING )
+%                     % gen_cube_mesh has CW winding... TODO: make winding order an object parameter so it can be set flexibly here
+%                     glFrontFace(GL.CW);
+%                     WL.Cube = WL.draw_object_shadow(WL.Cube);
+%                     %WL.draw_object_shadow(WL.Cube);
+%                 end
+%                 if str2double(WL.glslVersion)<3
+%                     glBindFramebufferEXT(GL.FRAMEBUFFER_EXT, 0);
+%                 else
+%                     glBindFramebuffer(GL.FRAMEBUFFER, 0);
+%                 end
+    
+                glUseProgram(0);
+            end
+
+            % Reset viewport and clear
+            glViewport(0,0,RectWidth(WL.Screen.windowRect),RectHeight(WL.Screen.windowRect));
+            glClear(bitor(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT));
 
             glUseProgram(WL.ShaderProgram);
             
@@ -207,7 +240,8 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             if( WL.State.Current == WL.State.RUNNING )
                 % gen_cube_mesh has CW winding... TODO: make winding order an object parameter so it can be set flexibly here
                 glFrontFace(GL.CW);
-                WL.draw_object(WL.Cube);
+                WL.Cube = WL.draw_object(WL.Cube);
+                %WL.draw_object(WL.Cube);
             end
             
             glUseProgram(0);
@@ -249,7 +283,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                     end
                     
                 case WL.State.RUNNING % Simulation running.
-                    if( isfield(WL.Robot,'UserFieldOutput') && ~isempty(WL.Robot.UserFieldOutput{1}) )
+                    if isfield(WL.Robot,'UserFieldOutput') && ~isempty(WL.Robot.UserFieldOutput{1}) 
                         if( WL.Robot.UserFieldOutput{1}.SelectedObject ~= WL.SelectedObject )
                             if( WL.SelectedObject == 0 )
                                 WL.find_nearest_object();
@@ -304,14 +338,14 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function [] = init_shader_program(WL,vspath,fspath)
+        function shaderprogram = init_shader_program(WL,vspath,fspath)
             global GL
             Screen('BeginOpenGL', WL.Screen.window);
 
             % Shader Initialization
             % We must compile a Shader Program that contains two Shaders: Vertex shader & Fragment shader
             % Create new program object and get handle to it
-            WL.ShaderProgram = glCreateProgram;
+            shaderprogram = glCreateProgram;
 
             % I. VERTEX SHADER
             % 1. Indicate the shader type
@@ -327,7 +361,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             % 5. Compile the shader:
             glCompileShader(shader_handle);
             % 6. Attach the shader to the program
-            glAttachShader(WL.ShaderProgram, shader_handle);
+            glAttachShader(shaderprogram, shader_handle);
 
             % II. FRAGMENT SHADER
             % 1. Indicate the shader type
@@ -343,10 +377,10 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             % 5. Compile the shader:
             glCompileShader(shader_handle);
             % 6. Attach the shader to the program
-            glAttachShader(WL.ShaderProgram, shader_handle);
+            glAttachShader(shaderprogram, shader_handle);
 
             % --> After both/all shaders have been attached, link the shader program
-            glLinkProgram(WL.ShaderProgram);
+            glLinkProgram(shaderprogram);
             
             Screen('EndOpenGL', WL.Screen.window);
         end
@@ -589,27 +623,37 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             end
             
             % From the Oculus (see wl_start_screen) >> PsychVRHMD('GetStaticRenderParameters', WL.Screen.hmd)
-            WL.Camera.Projection = WL.Screen.projMatrix;
+            %WL.Camera.Projection = WL.Screen.projMatrix;
+            WL.Camera.Projection = WL.perspective(75*pi/180, WL.Screen.ar, 1, 1000);
             projMatLoc = glGetUniformLocation(WL.ShaderProgram, 'projection');
             glUniformMatrix4fv(projMatLoc, 1, GL.FALSE, WL.Camera.Projection);
             % Projection matrix won't change and is same for both eyes
             % So we can set it here and forget it
 
             % View Matrix
-            WL.Camera.WorldUp = [0 0 1];
+%             WL.Camera.WorldUp = [0 0 1];
+%             WL.Camera.Position = [-0.5*WL.IOD 0.5*WL.IOD; -26 -26; 14 14]; % eyes in 3BOT coordinates
+%             % Remember: Do not include the IOD in Camera Forward (direction) vector!
+%             % The headset screens are not angled inward at the origin - they are just small windows in front of the eyes
+%             WL.Camera.Forward = [0 -26 14]/norm([0 -26 14]); 
+%             WL.Camera.Right = cross(WL.Camera.WorldUp, WL.Camera.Forward);
+%             WL.Camera.Up = cross(WL.Camera.Forward, WL.Camera.Right);
+%             WL.Camera.View = eye(4);
+%             WL.Camera.View(1:3, 1:3) = [WL.Camera.Right; WL.Camera.Up; WL.Camera.Forward];
+%             translationMatrixLeft = eye(4);
+%             translationMatrixRight = eye(4);
+%             translationMatrixLeft(1:3,4) = -WL.Camera.Position(:,1);
+%             translationMatrixRight(1:3,4) = -WL.Camera.Position(:,2);
+%             WL.Camera.View = cat(3, WL.Camera.View * translationMatrixLeft, WL.Camera.View * translationMatrixRight);
+
             WL.Camera.Position = [-0.5*WL.IOD 0.5*WL.IOD; -26 -26; 14 14]; % eyes in 3BOT coordinates
-            % Remember: Do not include the IOD in Camera Forward (direction) vector!
-            % The headset screens (unlike the eyes) are not angled inward at the origin.
-            WL.Camera.Forward = [0 -26 14]/norm([0 -26 14]); 
-            WL.Camera.Right = cross(WL.Camera.WorldUp, WL.Camera.Forward);
-            WL.Camera.Up = cross(WL.Camera.Forward, WL.Camera.Right);
-            WL.Camera.View = eye(4);
-            WL.Camera.View(1:3, 1:3) = [WL.Camera.Right; WL.Camera.Up; WL.Camera.Forward];
-            translationMatrixLeft = eye(4);
-            translationMatrixRight = eye(4);
-            translationMatrixLeft(1:3,4) = -WL.Camera.Position(:,1);
-            translationMatrixRight(1:3,4) = -WL.Camera.Position(:,2);
-            WL.Camera.View = cat(3, WL.Camera.View * translationMatrixLeft, WL.Camera.View * translationMatrixRight);
+            WL.Camera.View = cat(3, WL.look_at(WL.Camera.Position(:,1)', [-0.5*WL.IOD 0 0], [0 0 1]), WL.look_at(WL.Camera.Position(:,2)', [0.5*WL.IOD 0 0], [0 0 1]));
+
+            %WL.Camera.InvView = cat(3, inv(WL.Camera.View(:,:,1)), inv(WL.Camera.View(:,:,2)));
+            %WL.Camera.InvProj = inv(WL.Camera.Projection);
+
+            WL.Camera.InvViewProj = inv(mean(WL.Camera.View,3))*inv(WL.Camera.Projection);
+            
             % Can't set the camera position or view matrix shader uniforms here because they are eye-specific
             %   So must be done in the display_func
             
@@ -633,34 +677,32 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             WL.Light.Constant = 1;
             WL.Light.Linear = 0.1;
             WL.Light.Quadratic = 0.03;
-            if ~isfield(WL.Light,'Position')
-                WL.Light.Position =  [ -1  -1  10  0];
-            end
             
             if isfield(WL.Light,'Shadows')
-                WL.Light.ShadowsOn = true;
-                pos = WL.Light.Position(1:3);
-                WL.Light.WorldUp = [0 0 1];
-                WL.Light.Forward = pos/norm(pos); 
-                WL.Light.Right = cross(WL.Light.WorldUp, WL.Light.Forward);
-                WL.Light.Up = cross(WL.Light.Forward, WL.Light.Right);
-                WL.Light.View = eye(4);
-                WL.Light.View(1:3, 1:3) = [WL.Light.Right; WL.Light.Up; WL.Light.Forward];
-                frustumVerts = cell(6,1);
+%                 pos = WL.Light.Position(1:3);
+%                 WL.Light.WorldUp = [0 0 1];
+%                 WL.Light.Forward = pos/norm(pos); 
+%                 WL.Light.Right = cross(WL.Light.WorldUp, WL.Light.Forward);
+%                 WL.Light.Up = cross(WL.Light.Forward, WL.Light.Right);
+%                 WL.Light.View = eye(4);
+%                 WL.Light.View(1:3, 1:3) = [WL.Light.Right; WL.Light.Up; WL.Light.Forward];
+                WL.Light.View = WL.look_at(WL.Light.Position(1:3),[0 0 0],[0 0 1]);
+                WL.Light.FrustumVerts = cell(6,1);
                 vi = 0;
                 for zn = [-1 1]
                     for yn = [-1 1]
                         for xn = [-1 1]
                             vi = vi+1;
                             ndc = [xn yn zn 1]';
-                            %transform = WL.Light.View * inv(mean(WL.Camera.View,3) * WL.Camera.Projection);
-                            transform = WL.Light.View/(mean(WL.Camera.View,3) * WL.Camera.Projection);
-                            frustumVerts{vi} = transform*ndc;
+                            transform = WL.Light.View * WL.Camera.InvViewProj;
+                            %transform = WL.Light.View/(WL.Camera.Projection*mean(WL.Camera.View,3));
+                            WL.Light.FrustumVerts{vi} = transform*ndc;
+                            WL.Light.FrustumVerts{vi} = WL.Light.FrustumVerts{vi}./WL.Light.FrustumVerts{vi}(4);
                         end
                     end
                 end
-                WL.Light.ProjectionBounds = WL.compute_bounding_box(frustumVerts);
-                WL.Light.Projection = WL.gen_ortho_proj_mat(WL.Light.ProjectionBounds(1),WL.Light.ProjectionBounds(2),WL.Light.ProjectionBounds(3),WL.Light.ProjectionBounds(4), 1, -WL.Light.ProjectionBounds(4));
+                WL.Light.ProjectionBounds = WL.compute_bounding_box(WL.Light.FrustumVerts);
+                WL.Light.Projection = WL.orthogonal(WL.Light.ProjectionBounds(1),WL.Light.ProjectionBounds(2),WL.Light.ProjectionBounds(3),WL.Light.ProjectionBounds(4), 1, -WL.Light.ProjectionBounds(4));
                 WL.Light.ViewProjection = WL.Light.Projection*WL.Light.View;
                 
                 WL.init_shadow_map();
@@ -706,17 +748,29 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             glTexParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
             glTexParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
             glTexParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-            WL.Light.Shadows.ShadowMapFBO = glGenFramebuffers(1);
-            glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
-            glFramebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, WL.depthTexture, 0);
-            glBindFramebuffer(GL.FRAMEBUFFER, 0);
+            if str2double(WL.glslVersion)<3
+                WL.Light.Shadows.ShadowMapFBO = glGenFramebuffersEXT(1);
+                glBindFramebufferEXT(GL.FRAMEBUFFER_EXT, WL.Light.Shadows.ShadowMapFBO);
+                glFramebufferTexture2DEXT(GL.FRAMEBUFFER_EXT, GL.DEPTH_ATTACHMENT_EXT, GL.TEXTURE_2D, WL.depthTexture, 0);
+            else
+                WL.Light.Shadows.ShadowMapFBO = glGenFramebuffers(1);
+                glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
+                glFramebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, WL.depthTexture, 0);
+            end
+            glDrawBuffer(GL.NONE);
+            glReadBuffer(GL.NONE);
+            if str2double(WL.glslVersion)<3
+                glBindFramebuffer(GL.FRAMEBUFFER_EXT, 0);
+            else
+                glBindFramebuffer(GL.FRAMEBUFFER, 0);
+            end
             
             %Screen('EndOpenGL', WL.Screen.window);            
         end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function [] = draw_object(WL, object)
+        function object = draw_object(WL, object)
             if ~object.enabled
                 return
             end
@@ -738,7 +792,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                     o = object.orientation(:,oi)*pi/180;
                     v = object.position(:,oi);
                     s = object.scale(:,oi);
-                    object.modelMatrix(:,:,oi) = object.modelMatrix(:,:,oi) * makehgtform('translate',v) * ...
+                    object.modelMatrix(:,:,oi) = makehgtform('translate',v) * ...
                         makehgtform('zrotate',o(3)) * makehgtform('yrotate',o(2)) * ...
                         makehgtform('xrotate',o(1)) * makehgtform('scale',s);
                     object.invModelMatrix(:,:,oi) = inv(object.modelMatrix(:,:,oi));
@@ -803,6 +857,46 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                 glBindVertexArray(0);
             end
         end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        function object = draw_object_shadow(WL, object)
+            global GL
+            if ismac
+                glBindVertexArrayAPPLE(object.VAO);
+            else
+                glBindVertexArray(object.VAO);
+            end
+
+            for oi = 1:object.count
+                if object.modelMatrixUpdated(oi) || ~isfield(object,'modelMatrixUpdated')
+                    o = object.orientation(:,oi)*pi/180;
+                    v = object.position(:,oi);
+                    s = object.scale(:,oi);
+                    object.modelMatrix(:,:,oi) = makehgtform('translate',v) * ...
+                        makehgtform('zrotate',o(3)) * makehgtform('yrotate',o(2)) * ...
+                        makehgtform('xrotate',o(1)) * makehgtform('scale',s);
+                    object.invModelMatrix(:,:,oi) = inv(object.modelMatrix(:,:,oi));
+                    object.modelMatrixUpdated(oi) = false;
+                end
+            
+                if ismember(0, object.scale(:,oi))
+                    % don't try to draw things with 0 scale
+                    continue
+                end
+                
+                modelMatLoc = glGetUniformLocation(WL.Light.Shadows.ShaderProgram, 'model');
+                glUniformMatrix4fv(modelMatLoc, 1, GL.FALSE, object.modelMatrix(:,:,oi));
+
+                glDrawElements(GL.TRIANGLES, length(object.indices), GL.UNSIGNED_INT, 0); % 'drawMode', 'indexCount', 'indexType', 'firstIndexLoc'
+            end
+
+            if ismac
+                glBindVertexArrayAPPLE(0);
+            else
+                glBindVertexArray(0);
+            end
+        end
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
@@ -832,7 +926,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         
-        function out = gen_ortho_proj_mat(WL, left, right, bottom ,top, near, far)
+        function out = orthogonal(WL, left, right, bottom ,top, near, far)
             lr = 1/(left-right);
             bt = 1/(bottom-top);
             nf = 1/(near-far);
@@ -840,6 +934,41 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                     0 -2*bt 0 (top + bottom)*bt;
                     0 0 2*nf (far + near)*nf;
                     0 0 0 1];
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        function out = perspective(WL, fovy, aspect, near, far)
+            f = 1.0 / tan(fovy / 2);
+            nf = 1 / (near - far);
+            out = [ f/aspect 0 0 0;
+                    0 f 0 0;
+                    0 0 (far+near)*nf (2*far*near)*nf;
+                    0 0 -1 0];
+        end
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        function out = look_at(WL, pos, center, up)
+            z = pos - center;
+
+            if norm(z) < 0.0001
+                out = eye(4);
+                return
+            end
+
+            z = z/norm(z);
+
+            x = up([2 3 1]).*z([3 1 2]) - up([3 1 2]).*z([2 3 1]);
+            x = x/norm(x);
+
+            y = z([2 3 1]).*x([3 1 2]) - z([3 1 2]).*x([2 3 1]);
+            y = y/norm(y);
+
+            out = [x -x*pos';
+                   y -y*pos';
+                   z -z*pos';
+                   0 0 0 1];
         end
         
     end

@@ -184,7 +184,7 @@ while ~Exit % && test_count < length(delays)
                     glClearColor(WL.cfg.ClearColor(1),WL.cfg.ClearColor(2),WL.cfg.ClearColor(3),0);
                 end
 
-                glClear();
+                %glClear();
             end
             
             if WL.cfg.OculusRift && ~WL.cfg.GLSL

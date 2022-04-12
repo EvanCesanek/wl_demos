@@ -101,7 +101,7 @@ if( ~isfield(WL.Screen,'xcm') || ~isfield(WL.Screen,'ycm') )
 end
 
 Screen('BeginOpenGL',WL.Screen.window);
-
+%glViewport(0,0,RectWidth(windowRect),RectHeight(windowRect));
 if ~WL.cfg.GLSL
     glViewport(0,0,RectWidth(windowRect),RectHeight(windowRect));
     
@@ -142,7 +142,8 @@ glEnable(GL.CULL_FACE);
 
 % set and clear out the backbuffer
 glClearColor(WL.cfg.ClearColor(1),WL.cfg.ClearColor(2),WL.cfg.ClearColor(3),0);
-glClear;
+glClearDepth(1.0);
+%glClear(bitor(GL_COLOR_BUFFER_BIT, GL_DEPTH_BUFFER_BIT));
 
 % End the OpenGL context now that we have finished setting things up
 Screen('EndOpenGL', WL.Screen.window);
