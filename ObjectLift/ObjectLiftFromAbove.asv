@@ -201,26 +201,22 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
 
             if isfield(WL.Light,'Shadows') && WL.eyeIndex==0
                 glUseProgram(WL.Light.Shadows.ShaderProgram);
-%                 if str2double(WL.glslVersion)<3
-%                     glBindFramebufferEXT(GL.FRAMEBUFFER_EXT, WL.Light.Shadows.ShadowMapFBO);
-%                 else
-%                     glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
-%                 end
-%                 glViewport(0, 0, WL.Light.Shadows.TextureSize, WL.Light.Shadows.TextureSize);
-%                 glClear(bitor(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT));
-%                 if( WL.State.Current == WL.State.RUNNING )
-%                     % gen_cube_mesh has CW winding... TODO: make winding order an object parameter so it can be set flexibly here
-%                     glFrontFace(GL.CW);
-%                     WL.Cube = WL.draw_object_shadow(WL.Cube);
-%                     %WL.draw_object_shadow(WL.Cube);
-%                 end
-%                 if str2double(WL.glslVersion)<3
-%                     glBindFramebufferEXT(GL.FRAMEBUFFER_EXT, 0);
-%                 else
-%                     glBindFramebuffer(GL.FRAMEBUFFER, 0);
-%                 end
+                glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
+                glViewport(0, 0, WL.Light.Shadows.TextureSize, WL.Light.Shadows.TextureSize);
+                glClear(bitor(GL.COLOR_BUFFER_BIT, GL.DEPTH_BUFFER_BIT));
+                if( WL.State.Current == WL.State.RUNNING )
+                    % gen_cube_mesh has CW winding... TODO: make winding order an object parameter so it can be set flexibly here
+                    glFrontFace(GL.CW);
+                    WL.Cube = WL.draw_object_shadow(WL.Cube);
+                    %WL.draw_object_shadow(WL.Cube);
+                end
+                glBindFramebuffer(GL.FRAMEBUFFER, 0);
     
                 glUseProgram(0);
+                
+                % Reset viewport and clear
+                %glViewport(0,0,RectWidth(WL.Screen.windowRect),RectHeight(WL.Screen.windowRect));
+                %glClear();
             end
 
             % Reset viewport and clear
@@ -702,7 +698,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                     end
                 end
                 WL.Light.ProjectionBounds = WL.compute_bounding_box(WL.Light.FrustumVerts);
-                WL.Light.Projection = WL.orthogonal(WL.Light.ProjectionBounds(1),WL.Light.ProjectionBounds(2),WL.Light.ProjectionBounds(3),WL.Light.ProjectionBounds(4), 1, -WL.Light.ProjectionBounds(4));
+                WL.Light.Projection = WL.orthogonal(WL.Light.ProjectionBounds(1),WL.Light.ProjectionBounds(2),WL.Light.ProjectionBounds(3),WL.Light.ProjectionBounds(4), 1, -WL.Light.ProjectionBounds(5));
                 WL.Light.ViewProjection = WL.Light.Projection*WL.Light.View;
                 
                 WL.init_shadow_map();
@@ -748,22 +744,12 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             glTexParameteri(GL.TEXTURE_2D, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
             glTexParameteri(GL.TEXTURE_2D, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
             glTexParameteri(GL.TEXTURE_2D, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
-            if str2double(WL.glslVersion)<3
-                WL.Light.Shadows.ShadowMapFBO = glGenFramebuffersEXT(1);
-                glBindFramebufferEXT(GL.FRAMEBUFFER_EXT, WL.Light.Shadows.ShadowMapFBO);
-                glFramebufferTexture2DEXT(GL.FRAMEBUFFER_EXT, GL.DEPTH_ATTACHMENT_EXT, GL.TEXTURE_2D, WL.depthTexture, 0);
-            else
-                WL.Light.Shadows.ShadowMapFBO = glGenFramebuffers(1);
-                glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
-                glFramebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, WL.depthTexture, 0);
-            end
+            WL.Light.Shadows.ShadowMapFBO = glGenFramebuffers(1);
+            glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
+            glFramebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, WL.depthTexture, 0);
             glDrawBuffer(GL.NONE);
             glReadBuffer(GL.NONE);
-            if str2double(WL.glslVersion)<3
-                glBindFramebuffer(GL.FRAMEBUFFER_EXT, 0);
-            else
-                glBindFramebuffer(GL.FRAMEBUFFER, 0);
-            end
+            glBindFramebuffer(GL.FRAMEBUFFER, 0);
             
             %Screen('EndOpenGL', WL.Screen.window);            
         end

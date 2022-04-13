@@ -1,6 +1,6 @@
 #version 460
 precision lowp float;
-in vec2 TexCoord;
+//in vec2 TexCoord;
 
 void main()
 {

@@ -128,8 +128,8 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             WL.init_camera();
             
             % Lights (% w = 0 for directional light, w = 1 for point light)
-            WL.Light.Position =  [-10 -10 50 0]; % Remember to change NR_LIGHTS in frag shader if you add lights
-            % TODO: Fix light position matrix so each column is the position vector for one light (not each row)
+            WL.Light.Position =  [-10 -10 100 0]; % Remember to change NR_LIGHTS in frag shader if you add lights
+            % TODO: Fix light position matrix so each *column* is the position vector for one light (not each row)
             WL.Light.Shadows.TextureUnit = 8; % Remember not to use this texture unit later
             WL.Light.Shadows.TextureSize = 4096;
             if ~WL.cfg.Shadows
@@ -187,7 +187,6 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
         
         function keyboard_func(WL,keyname)
             WL.printf('Key pressed: %s\n',keyname);
-            
 %             WL.FieldState = ~WL.FieldState;
 %             ok = WL.Robot.FieldUserStateSet(double(WL.FieldState));
 %             WL.printf('FieldState=%d, ok=%d\n',WL.FieldState,ok);
@@ -197,9 +196,10 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
         
         function display_func(WL)
             global GL
-            Screen('BeginOpenGL', WL.Screen.window);
+            
 
             if isfield(WL.Light,'Shadows') && WL.eyeIndex==0
+                Screen('BeginOpenGL', WL.Screen.window);
                 glUseProgram(WL.Light.Shadows.ShaderProgram);
                 glBindFramebuffer(GL.FRAMEBUFFER, WL.Light.Shadows.ShadowMapFBO);
                 glViewport(0, 0, WL.Light.Shadows.TextureSize, WL.Light.Shadows.TextureSize);
@@ -213,11 +213,14 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                 glBindFramebuffer(GL.FRAMEBUFFER, 0);
     
                 glUseProgram(0);
-                
-                % Reset viewport and clear
-                %glViewport(0,0,RectWidth(WL.Screen.windowRect),RectHeight(WL.Screen.windowRect));
-                %glClear();
+                Screen('EndOpenGL', WL.Screen.window);
             end
+            
+            % Select the eye buffer
+            if WL.cfg.Stereo
+                Screen('SelectStereoDrawbuffer',WL.Screen.window, WL.eyeIndex);
+            end
+            Screen('BeginOpenGL', WL.Screen.window);
 
             % Reset viewport and clear
             glViewport(0,0,RectWidth(WL.Screen.windowRect),RectHeight(WL.Screen.windowRect));
@@ -279,7 +282,8 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                     end
                     
                 case WL.State.RUNNING % Simulation running.
-                    if isfield(WL.Robot,'UserFieldOutput') && ~isempty(WL.Robot.UserFieldOutput{1}) 
+                    % NB can't use isfield here, because UserFieldOutput is often empty so will return false
+                    if ismember('UserFieldOutput',fieldnames(WL.Robot)) && ~isempty(WL.Robot.UserFieldOutput{1}) 
                         if( WL.Robot.UserFieldOutput{1}.SelectedObject ~= WL.SelectedObject )
                             if( WL.SelectedObject == 0 )
                                 WL.find_nearest_object();
@@ -612,42 +616,29 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             glUseProgram(WL.ShaderProgram);
             
             % % Camera Properties (static because 3BOT-Oculus is fixed)
-            if WL.cfg.MouseFlag
+            if ~WL.cfg.Stereo
                 WL.IOD = 0;
             else
                 WL.IOD = 6.25; % cm
             end
             
             % From the Oculus (see wl_start_screen) >> PsychVRHMD('GetStaticRenderParameters', WL.Screen.hmd)
-            %WL.Camera.Projection = WL.Screen.projMatrix;
-            WL.Camera.Projection = WL.perspective(75*pi/180, WL.Screen.ar, 1, 1000);
+            if WL.cfg.OculusRift
+                WL.Camera.Projection = WL.Screen.projMatrix;
+            else
+                WL.Camera.Projection = WL.perspective(75*pi/180, WL.Screen.ar, 5, 100);
+            end
             projMatLoc = glGetUniformLocation(WL.ShaderProgram, 'projection');
             glUniformMatrix4fv(projMatLoc, 1, GL.FALSE, WL.Camera.Projection);
             % Projection matrix won't change and is same for both eyes
             % So we can set it here and forget it
 
             % View Matrix
-%             WL.Camera.WorldUp = [0 0 1];
-%             WL.Camera.Position = [-0.5*WL.IOD 0.5*WL.IOD; -26 -26; 14 14]; % eyes in 3BOT coordinates
-%             % Remember: Do not include the IOD in Camera Forward (direction) vector!
-%             % The headset screens are not angled inward at the origin - they are just small windows in front of the eyes
-%             WL.Camera.Forward = [0 -26 14]/norm([0 -26 14]); 
-%             WL.Camera.Right = cross(WL.Camera.WorldUp, WL.Camera.Forward);
-%             WL.Camera.Up = cross(WL.Camera.Forward, WL.Camera.Right);
-%             WL.Camera.View = eye(4);
-%             WL.Camera.View(1:3, 1:3) = [WL.Camera.Right; WL.Camera.Up; WL.Camera.Forward];
-%             translationMatrixLeft = eye(4);
-%             translationMatrixRight = eye(4);
-%             translationMatrixLeft(1:3,4) = -WL.Camera.Position(:,1);
-%             translationMatrixRight(1:3,4) = -WL.Camera.Position(:,2);
-%             WL.Camera.View = cat(3, WL.Camera.View * translationMatrixLeft, WL.Camera.View * translationMatrixRight);
-
             WL.Camera.Position = [-0.5*WL.IOD 0.5*WL.IOD; -26 -26; 14 14]; % eyes in 3BOT coordinates
             WL.Camera.View = cat(3, WL.look_at(WL.Camera.Position(:,1)', [-0.5*WL.IOD 0 0], [0 0 1]), WL.look_at(WL.Camera.Position(:,2)', [0.5*WL.IOD 0 0], [0 0 1]));
 
             %WL.Camera.InvView = cat(3, inv(WL.Camera.View(:,:,1)), inv(WL.Camera.View(:,:,2)));
             %WL.Camera.InvProj = inv(WL.Camera.Projection);
-
             WL.Camera.InvViewProj = inv(mean(WL.Camera.View,3))*inv(WL.Camera.Projection);
             
             % Can't set the camera position or view matrix shader uniforms here because they are eye-specific
@@ -675,13 +666,6 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             WL.Light.Quadratic = 0.03;
             
             if isfield(WL.Light,'Shadows')
-%                 pos = WL.Light.Position(1:3);
-%                 WL.Light.WorldUp = [0 0 1];
-%                 WL.Light.Forward = pos/norm(pos); 
-%                 WL.Light.Right = cross(WL.Light.WorldUp, WL.Light.Forward);
-%                 WL.Light.Up = cross(WL.Light.Forward, WL.Light.Right);
-%                 WL.Light.View = eye(4);
-%                 WL.Light.View(1:3, 1:3) = [WL.Light.Right; WL.Light.Up; WL.Light.Forward];
                 WL.Light.View = WL.look_at(WL.Light.Position(1:3),[0 0 0],[0 0 1]);
                 WL.Light.FrustumVerts = cell(6,1);
                 vi = 0;
@@ -698,7 +682,7 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
                     end
                 end
                 WL.Light.ProjectionBounds = WL.compute_bounding_box(WL.Light.FrustumVerts);
-                WL.Light.Projection = WL.orthogonal(WL.Light.ProjectionBounds(1),WL.Light.ProjectionBounds(2),WL.Light.ProjectionBounds(3),WL.Light.ProjectionBounds(4), 1, -WL.Light.ProjectionBounds(4));
+                WL.Light.Projection = WL.orthogonal(WL.Light.ProjectionBounds(1),WL.Light.ProjectionBounds(2),WL.Light.ProjectionBounds(3),WL.Light.ProjectionBounds(4), 1, -WL.Light.ProjectionBounds(5));
                 WL.Light.ViewProjection = WL.Light.Projection*WL.Light.View;
                 
                 WL.init_shadow_map();
@@ -853,6 +837,9 @@ classdef ObjectLiftFromAbove < wl_experiment_v1_8
             else
                 glBindVertexArray(object.VAO);
             end
+            
+            lightViewLoc = glGetUniformLocation(WL.Light.Shadows.ShaderProgram, 'lightView');
+            glUniformMatrix4fv(lightViewLoc, 1, GL.FALSE, WL.Light.ViewProjection);
 
             for oi = 1:object.count
                 if object.modelMatrixUpdated(oi) || ~isfield(object,'modelMatrixUpdated')

@@ -169,10 +169,7 @@ while ~Exit % && test_count < length(delays)
         desired_flip_2_display_func_buffer.set(desired_flip_2_display_func);
         
         for eyeindex = 0:1
-            % Select the eye buffer
-            if WL.cfg.OculusRift
-                Screen('SelectStereoDrawbuffer',WL.Screen.window, eyeindex);
-            elseif eyeindex==1
+            if ~WL.cfg.Stereo && eyeindex==1
                 break
             end
             
@@ -245,6 +242,8 @@ while ~Exit % && test_count < length(delays)
                 WL.Timer.Graphics.display_func.Toc();
             end
         end % eye loop
+        
+        Screen('DrawingFinished', WL.Screen.window);
         
         WL.Timer.Graphics.display_main.Toc(); % Time the entire draw frame process
         

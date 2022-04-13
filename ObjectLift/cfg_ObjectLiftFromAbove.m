@@ -15,26 +15,30 @@ assignin('base','MHF_FieldFuncPath','J:\RobotFields\');
 % end
 
 WL.cfg.GLSL = true;
+WL.cfg.Stereo = true;
 WL.cfg.Shadows = true;
-WL.cfg.OculusRift = false;
-WL.cfg.OculusGrid = false;
-%WL.cfg.ScreenIndex = 1;
-WL.cfg.predict_display_timing = -1; % Don't predict when to call display_func() to avoid white flashes.
-
-WL.cfg.RobotForceMax = 40; % IMPORTANT! When testing, limit force to 10N
-
-WL.cfg.OculusMonitorView = false; %true;
+WL.cfg.OculusRift = true;
+WL.cfg.MouseFlag = ~WL.cfg.OculusRift;
+WL.cfg.SmallScreen = ~WL.cfg.OculusRift;
+if WL.cfg.Stereo
+    WL.cfg.SmallScreenScale = [0.12 0.2]; % NB on retina pixels are doubled, 0.5 = fullscreen
+else
+    WL.cfg.SmallScreenScale = 0.3;
+end
+WL.cfg.OculusMonitorView = false;
 WL.cfg.OculusMonitorUpdateHz = 10;
-%WL.cfg.RotateScreen = true; % true on VIOLET & BEGONIA rigs
-WL.cfg.MouseFlag = true;
-WL.cfg.SmallScreen = true;
-WL.cfg.SmallScreenScale = 0.3; % NB on retina, 0.5 = fullscreen
+%WL.cfg.OculusGrid = false;
 %WL.cfg.ScreenSize = 2*[100 100 640 640*16.8/29.8]; 
 %WL.cfg.ClearColor = [ 0 0 0 ];
 %WL.cfg.trial_save = true;
 %WL.cfg.verbose = 0;
 %WL.cfg.vol = 0.5;
 %WL.cfg.Debug = true;
+%WL.cfg.ScreenIndex = 1;
+%WL.cfg.RotateScreen = true; % true on VIOLET & BEGONIA rigs
+
+WL.cfg.predict_display_timing = -1; % Don't predict when to call display_func() to avoid white flashes.
+WL.cfg.RobotForceMax = 40; % IMPORTANT! When testing, limit force to 10N
 
 WL.cfg.plot_timing = 0;
 
